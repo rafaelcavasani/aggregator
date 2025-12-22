@@ -1,0 +1,134 @@
+### Buscar documento por ID (GET direto - sem cálculo de saldo)
+### Nota: Retorna documento bruto, cálculo deve ser feito na aplicação
+GET http://localhost:9200/ciclo_vida_recebivel/_doc/a7f3c8e2-9b4d-4f6a-8c2e-5d7b9f1a3e6c?pretty=
+
+### Buscar recebível por ID com saldo calculado (query otimizada - quase tão rápida quanto GET)
+GET http://localhost:9200/ciclo_vida_recebivel/_search?pretty=
+Content-Type: application/json
+
+{
+  "query": {
+    "term": {
+      "_id": "a7f3c8e2-9b4d-4f6a-8c2e-5d7b9f1a3e6c"
+    }
+  },
+  "size": 1,
+  "script_fields": {
+    "saldo_calculado": {
+      "script": {
+        "lang": "painless",
+        "source": "double valor = params._source.valor_original; double cancelado = 0.0; double negociado = 0.0; if (params._source.cancelamentos != null) { for (def c : params._source.cancelamentos) { cancelado += c.valor_cancelado; } } if (params._source.negociacoes != null) { for (def n : params._source.negociacoes) { negociado += n.valor_negociado; } } return Math.round((valor - cancelado - negociado) * 100.0) / 100.0;"
+      }
+    }
+  },
+  "_source": ["id_recebivel", "codigo_cliente", "valor_original", "data_vencimento", "cancelamentos", "negociacoes"]
+}
+
+### Buscar saldo de um recebível específico por ID (usando _search com agregação bucket_script)
+### Nota: Use _id para buscar pelo ID interno do documento
+GET http://localhost:9200/ciclo_vida_recebivel/_search?pretty=
+Content-Type: application/json
+
+{
+  "query": {
+    "term": {
+      "_id": "a7f3c8e2-9b4d-4f6a-8c2e-5d7b9f1a3e6c"
+    }
+  },
+  "size": 1,
+  "aggs": {
+    "saldo_recebivel": {
+      "filters": {
+        "filters": {
+          "recebivel": {
+            "term": {
+              "_id": "a7f3c8e2-9b4d-4f6a-8c2e-5d7b9f1a3e6c"
+            }
+          }
+        }
+      },
+      "aggs": {
+        "valor_original": {
+          "sum": {
+            "field": "valor_original"
+          }
+        },
+        "total_cancelamentos": {
+          "nested": {
+            "path": "cancelamentos"
+          },
+          "aggs": {
+            "soma_cancelado": {
+              "sum": {
+                "field": "cancelamentos.valor_cancelado"
+              }
+            }
+          }
+        },
+        "total_negociacoes": {
+          "nested": {
+            "path": "negociacoes"
+          },
+          "aggs": {
+            "soma_negociado": {
+              "sum": {
+                "field": "negociacoes.valor_negociado"
+              }
+            }
+          }
+        },
+        "saldo_disponivel": {
+          "bucket_script": {
+            "buckets_path": {
+              "original": "valor_original",
+              "cancelado": "total_cancelamentos>soma_cancelado",
+              "negociado": "total_negociacoes>soma_negociado"
+            },
+            "script": "Math.round((params.original - params.cancelado - params.negociado) * 100) / 100"
+          }
+        }
+      }
+    }
+  },
+  "_source": ["id_recebivel", "codigo_cliente", "valor_original", "data_vencimento", "cancelamentos", "negociacoes"]
+}
+
+### Buscar saldo de recebível com script_fields (retorna saldo junto com documento)
+GET http://localhost:9200/ciclo_vida_recebivel/_search?pretty=
+Content-Type: application/json
+
+{
+  "query": {
+    "term": {
+      "id_recebivel.keyword": "a7f3c8e2-9b4d-4f6a-8c2e-5d7b9f1a3e6c"
+    }
+  },
+  "size": 1,
+  "script_fields": {
+    "saldo_calculado": {
+      "script": {
+        "lang": "painless",
+        "source": """
+          double valor = params._source.valor_original;
+          double cancelado = 0.0;
+          double negociado = 0.0;
+          
+          if (params._source.cancelamentos != null) {
+            for (def c : params._source.cancelamentos) {
+              cancelado += c.valor_cancelado;
+            }
+          }
+          
+          if (params._source.negociacoes != null) {
+            for (def n : params._source.negociacoes) {
+              negociado += n.valor_negociado;
+            }
+          }
+          
+          return Math.round((valor - cancelado - negociado) * 100.0) / 100.0;
+        """
+      }
+    }
+  },
+  "_source": ["id_recebivel", "codigo_cliente", "valor_original", "data_vencimento", "cancelamentos", "negociacoes"]
+}

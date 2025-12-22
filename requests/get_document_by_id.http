@@ -1,0 +1,62 @@
+### Buscar documento específico por ID do recebível
+GET http://localhost:9200/ciclo_vida_recebivel/_search?pretty=
+Content-Type: application/json
+
+{
+  "query": {
+    "term": {
+      "id_recebivel.keyword": "REC-00001"
+    }
+  }
+}
+
+### Buscar documento específico usando GET direto (mais eficiente)
+GET http://localhost:9200/ciclo_vida_recebivel/_doc/REC-00001?pretty=
+
+### Buscar múltiplos documentos específicos por IDs
+GET http://localhost:9200/ciclo_vida_recebivel/_search?pretty=
+Content-Type: application/json
+
+{
+  "query": {
+    "ids": {
+      "values": ["REC-00001", "REC-00002", "REC-00003"]
+    }
+  }
+}
+
+### Buscar documento por ID do pagamento (parent)
+GET http://localhost:9200/ciclo_vida_recebivel/_search?pretty=
+Content-Type: application/json
+
+{
+  "query": {
+    "term": {
+      "id_pagamento.keyword": "PAG-00001"
+    }
+  },
+  "size": 20
+}
+
+### Buscar documento específico com filtros adicionais
+GET http://localhost:9200/ciclo_vida_recebivel/_search?pretty=
+Content-Type: application/json
+
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "term": {
+            "id_recebivel.keyword": "REC-00001"
+          }
+        },
+        {
+          "term": {
+            "codigo_cliente.keyword": "CLI-10001"
+          }
+        }
+      ]
+    }
+  }
+}
