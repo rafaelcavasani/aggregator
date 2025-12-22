@@ -1,0 +1,2 @@
+### Contar total de documentos no índice
+GET http://localhost:9200/ciclo_vida_recebivel/_count

@@ -1,0 +1,46 @@
+### Buscar recebíveis ordenados por saldo disponível (maior para menor)
+GET http://localhost:9200/ciclo_vida_recebivel/_search?pretty=
+Content-Type: application/json
+
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "term": {
+            "codigo_cliente.keyword": "CLI-10001"
+          }
+        },
+        {
+          "range": {
+            "data_vencimento": {
+              "gte": "2025-01-01",
+              "lte": "2025-12-31"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "size": 20,
+  "script_fields": {
+    "saldo_disponivel": {
+      "script": {
+        "lang": "painless",
+        "source": "double saldo = doc['valor_original'].value; if (params._source.cancelamentos != null) { for (def c : params._source.cancelamentos) { saldo -= c.valor_cancelado; } } if (params._source.negociacoes != null) { for (def n : params._source.negociacoes) { saldo -= n.valor_negociado; } } return Math.round(saldo * 100.0) / 100.0;"
+      }
+    }
+  },
+  "sort": [
+    {
+      "_script": {
+        "type": "number",
+        "script": {
+          "lang": "painless",
+          "source": "double saldo = doc['valor_original'].value; if (params._source.cancelamentos != null) { for (def c : params._source.cancelamentos) { saldo -= c.valor_cancelado; } } if (params._source.negociacoes != null) { for (def n : params._source.negociacoes) { saldo -= n.valor_negociado; } } return saldo;"
+        },
+        "order": "desc"
+      }
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+### Contar recebíveis agrupados por cliente
+GET http://localhost:9200/ciclo_vida_recebivel/_search?pretty=
+Content-Type: application/json
+
+{
+  "size": 0,
+  "query": {
+    "range": {"data_vencimento": {"gte": "2025-01-01", "lte": "2026-12-31"}}
+  },
+  "aggs": {
+    "total_por_cliente": {
+      "terms": {
+        "field": "codigo_cliente.keyword",
+        "size": 100
+      }
+    }
+  }
+}

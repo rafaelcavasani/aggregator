@@ -1,0 +1,2 @@
+### Buscar primeiros 10 documentos
+GET http://localhost:9200/ciclo_vida_recebivel/_search?size=10&pretty=

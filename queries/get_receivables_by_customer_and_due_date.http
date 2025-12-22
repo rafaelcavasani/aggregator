@@ -1,0 +1,16 @@
+### Buscar recebíveis por cliente e data de vencimento
+GET http://localhost:9200/ciclo_vida_recebivel/_search?pretty=
+Content-Type: application/json
+
+{
+  "query": {
+    "bool": {
+      "must": [
+        {"match": {"codigo_cliente": "123456"}},
+        {"range": {"data_vencimento": {"gte": "2025-12-01", "lte": "2026-12-31"}}}
+      ]
+    }
+  },
+  "sort": [{"data_vencimento": {"order": "asc"}}],
+  "size": 100
+}

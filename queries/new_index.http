@@ -1,0 +1,34 @@
+### Criar índice ciclo_vida_recebivel
+PUT http://localhost:9200/ciclo_vida_recebivel
+Content-Type: application/json
+
+{
+  "mappings": {
+    "properties": {
+      "id_recebivel": {"type": "keyword"},
+      "codigo_cliente": {"type": "keyword"},
+      "codigo_produto": {"type": "integer"},
+      "codigo_produto_parceiro": {"type": "integer"},
+      "modalidade": {"type": "integer"},
+      "valor_original": {"type": "float"},
+      "data_vencimento": {"type": "date"},
+      "cancelamentos": {
+        "type": "nested",
+        "properties": {
+          "id_cancelamento": {"type": "keyword"},
+          "data_cancelamento": {"type": "date"},
+          "valor_cancelado": {"type": "float"},
+          "motivo": {"type": "text"}
+        }
+      },
+      "negociacoes": {
+        "type": "nested",
+        "properties": {
+          "id_negociacao": {"type": "keyword"},
+          "data_negociacao": {"type": "date"},
+          "valor_negociado": {"type": "float"}
+        }
+      }
+    }
+  }
+}

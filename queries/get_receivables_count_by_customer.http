@@ -1,0 +1,11 @@
+### Contar recebíveis de um cliente específico
+GET http://localhost:9200/ciclo_vida_recebivel/_count?pretty=
+Content-Type: application/json
+
+{
+  "query": {
+    "term": {
+      "codigo_cliente.keyword": "CLI-10008"
+    }
+  }
+}
