@@ -1,4 +1,4 @@
-### Buscar saldo de cliente (via Elasticsearch direto)
+### Buscar saldo calculado com agregações nativas (performático)
 GET http://localhost:9200/ciclo_vida_recebivel/_search?pretty=
 Content-Type: application/json
 
@@ -16,7 +16,7 @@ Content-Type: application/json
           "range": {
             "data_vencimento": {
               "gte": "2025-01-01",
-              "lte": "2028-12-31"
+              "lte": "2026-12-31"
             }
           }
         }
@@ -24,12 +24,54 @@ Content-Type: application/json
     }
   },
   "aggs": {
-    "saldo_total": {
-      "scripted_metric": {
-        "init_script": "state.saldo_total = 0.0",
-        "map_script": "double saldo = doc['valor_original'].value; if (params._source.cancelamentos != null) { for (def c : params._source.cancelamentos) { saldo -= c.valor_cancelado; } } if (params._source.negociacoes != null) { for (def n : params._source.negociacoes) { saldo -= n.valor_negociado; } } state.saldo_total += saldo;",
-        "combine_script": "return state.saldo_total",
-        "reduce_script": "double total = 0; for (s in states) { total += s; } return Math.round(total * 100.0) / 100.0"
+    "resultado": {
+      "filters": {
+        "filters": {
+          "all": {
+            "match_all": {}
+          }
+        }
+      },
+      "aggs": {
+        "soma_valores_originais": {
+          "sum": {
+            "field": "valor_original"
+          }
+        },
+        "soma_cancelamentos": {
+          "nested": {
+            "path": "cancelamentos"
+          },
+          "aggs": {
+            "total_cancelado": {
+              "sum": {
+                "field": "cancelamentos.valor_cancelado"
+              }
+            }
+          }
+        },
+        "soma_negociacoes": {
+          "nested": {
+            "path": "negociacoes"
+          },
+          "aggs": {
+            "total_negociado": {
+              "sum": {
+                "field": "negociacoes.valor_negociado"
+              }
+            }
+          }
+        },
+        "saldo_disponivel": {
+          "bucket_script": {
+            "buckets_path": {
+              "valores": "soma_valores_originais",
+              "cancelamentos": "soma_cancelamentos>total_cancelado",
+              "negociacoes": "soma_negociacoes>total_negociado"
+            },
+            "script": "Math.round((params.valores - params.cancelamentos - params.negociacoes) * 100) / 100"
+          }
+        }
       }
     }
   }

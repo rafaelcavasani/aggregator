@@ -1,4 +1,4 @@
-### Buscar recebíveis por cliente e data de vencimento
+### Buscar recebíveis por cliente e data de vencimento (Página 1)
 GET http://localhost:9200/ciclo_vida_recebivel/_search?pretty=
 Content-Type: application/json
 
@@ -12,5 +12,42 @@ Content-Type: application/json
     }
   },
   "sort": [{"data_vencimento": {"order": "asc"}}],
-  "size": 100
+  "from": 0,
+  "size": 1
+}
+
+### Buscar recebíveis por cliente e data de vencimento (Página 2)
+GET http://localhost:9200/ciclo_vida_recebivel/_search?pretty=
+Content-Type: application/json
+
+{
+  "query": {
+    "bool": {
+      "must": [
+        {"match": {"codigo_cliente": "123456"}},
+        {"range": {"data_vencimento": {"gte": "2025-12-01", "lte": "2026-12-31"}}}
+      ]
+    }
+  },
+  "sort": [{"data_vencimento": {"order": "asc"}}],
+  "from": 2,
+  "size": 1
+}
+
+### Buscar recebíveis por cliente e data de vencimento (Página 3)
+GET http://localhost:9200/ciclo_vida_recebivel/_search?pretty=
+Content-Type: application/json
+
+{
+  "query": {
+    "bool": {
+      "must": [
+        {"match": {"codigo_cliente": "123456"}},
+        {"range": {"data_vencimento": {"gte": "2025-12-01", "lte": "2026-12-31"}}}
+      ]
+    }
+  },
+  "sort": [{"data_vencimento": {"order": "asc"}}],
+  "from": 3,
+  "size": 1
 }

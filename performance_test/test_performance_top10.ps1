@@ -71,8 +71,8 @@ foreach ($cliente in $top10Clientes) {
     
     Write-Host "    Count: $($resultCount.count) | Tempo: $([math]::Round($tempoCount, 2))ms" -ForegroundColor Green
     
-    # Teste 2: Saldo Total (Painless)
-    Write-Host "  Teste 2: Cálculo de saldo (Painless)..." -ForegroundColor Yellow
+    # Teste 2: Saldo Total (Bucket Script)
+    Write-Host "  Teste 2: Cálculo de saldo (Bucket Script)..." -ForegroundColor Yellow
     $querySaldo = @"
 {
   "size": 0,
@@ -96,12 +96,54 @@ foreach ($cliente in $top10Clientes) {
     }
   },
   "aggs": {
-    "saldo_total": {
-      "scripted_metric": {
-        "init_script": "state.saldo_total = 0.0",
-        "map_script": "double saldo = doc['valor_original'].value; if (params._source.cancelamentos != null) { for (def c : params._source.cancelamentos) { saldo -= c.valor_cancelado; } } if (params._source.negociacoes != null) { for (def n : params._source.negociacoes) { saldo -= n.valor_negociado; } } state.saldo_total += saldo;",
-        "combine_script": "return state.saldo_total",
-        "reduce_script": "double total = 0; for (s in states) { total += s; } return Math.round(total * 100.0) / 100.0"
+    "resultado": {
+      "filters": {
+        "filters": {
+          "all": {
+            "match_all": {}
+          }
+        }
+      },
+      "aggs": {
+        "soma_valores_originais": {
+          "sum": {
+            "field": "valor_original"
+          }
+        },
+        "soma_cancelamentos": {
+          "nested": {
+            "path": "cancelamentos"
+          },
+          "aggs": {
+            "total_cancelado": {
+              "sum": {
+                "field": "cancelamentos.valor_cancelado"
+              }
+            }
+          }
+        },
+        "soma_negociacoes": {
+          "nested": {
+            "path": "negociacoes"
+          },
+          "aggs": {
+            "total_negociado": {
+              "sum": {
+                "field": "negociacoes.valor_negociado"
+              }
+            }
+          }
+        },
+        "saldo_disponivel": {
+          "bucket_script": {
+            "buckets_path": {
+              "valores": "soma_valores_originais",
+              "cancelamentos": "soma_cancelamentos>total_cancelado",
+              "negociacoes": "soma_negociacoes>total_negociado"
+            },
+            "script": "Math.round((params.valores - params.cancelamentos - params.negociacoes) * 100) / 100"
+          }
+        }
       }
     }
   }
@@ -115,7 +157,7 @@ foreach ($cliente in $top10Clientes) {
       --data-binary "@temp_saldo.json" 2>$null | ConvertFrom-Json
     $end = Get-Date
     $tempoSaldo = ($end - $start).TotalMilliseconds
-    $saldo = $resultSaldo.aggregations.saldo_total.value
+    $saldo = $resultSaldo.aggregations.resultado.buckets.all.saldo_disponivel.value
     
     Write-Host "    Saldo: R$ $([math]::Round($saldo, 2)) | Tempo: $([math]::Round($tempoSaldo, 2))ms" -ForegroundColor Green
     

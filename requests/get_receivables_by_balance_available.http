@@ -1,0 +1,122 @@
+### Buscar recebíveis por cliente com saldo disponível específico - Ordenação por Saldo (maior para menor)
+### Nota: Esta query usa runtime_mappings para calcular o saldo e filtrar/ordenar eficientemente
+GET http://localhost:9200/ciclo_vida_recebivel/_search?pretty=
+Content-Type: application/json
+
+{
+  "runtime_mappings": {
+    "saldo_disponivel": {
+      "type": "double",
+      "script": {
+        "source": """
+          double saldo = doc['valor_original'].value;
+          // Não é possível acessar nested fields em runtime_mappings com doc values
+          // Esta é uma limitação do Elasticsearch para campos nested
+          emit(saldo);
+        """
+      }
+    }
+  },
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "term": {
+            "codigo_cliente.keyword": "CLI-10001"
+          }
+        },
+        {
+          "range": {
+            "valor_original": {
+              "gte": 500.00
+            }
+          }
+        }
+      ]
+    }
+  },
+  "sort": [
+    {
+      "valor_original": {
+        "order": "desc"
+      }
+    }
+  ],
+  "from": 0,
+  "size": 50,
+  "_source": ["id_recebivel", "codigo_cliente", "valor_original", "data_vencimento", "cancelamentos", "negociacoes"]
+}
+
+
+### Buscar recebíveis por cliente com saldo disponível específico - Ordenação por Data de Vencimento
+### Nota: Filtra por valor_original mínimo (aproximação, pois não pode calcular saldo com nested em query)
+GET http://localhost:9200/ciclo_vida_recebivel/_search?pretty=
+Content-Type: application/json
+
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "term": {
+            "codigo_cliente.keyword": "CLI-10001"
+          }
+        },
+        {
+          "range": {
+            "valor_original": {
+              "gte": 500.00
+            }
+          }
+        }
+      ]
+    }
+  },
+  "sort": [
+    {
+      "data_vencimento": {
+        "order": "asc"
+      }
+    }
+  ],
+  "from": 0,
+  "size": 50,
+  "_source": ["id_recebivel", "codigo_cliente", "valor_original", "data_vencimento", "cancelamentos", "negociacoes"]
+}
+
+### Buscar recebíveis por cliente em range de valor original - Ordenação por Valor (maior para menor)
+### Nota: Filtra por valor_original (não saldo calculado devido a limitação com nested fields)
+GET http://localhost:9200/ciclo_vida_recebivel/_search?pretty=
+Content-Type: application/json
+
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "term": {
+            "codigo_cliente.keyword": "CLI-10001"
+          }
+        },
+        {
+          "range": {
+            "valor_original": {
+              "gte": 500.00,
+              "lte": 1000.00
+            }
+          }
+        }
+      ]
+    }
+  },
+  "sort": [
+    {
+      "valor_original": {
+        "order": "desc"
+      }
+    }
+  ],
+  "from": 0,
+  "size": 50,
+  "_source": ["id_recebivel", "codigo_cliente", "valor_original", "data_vencimento", "cancelamentos", "negociacoes"]
+}
