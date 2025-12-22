@@ -1,0 +1,12 @@
+{
+  "query": {
+    "bool": {
+      "must": [
+        {"term": {"codigo_cliente.keyword": "CLI-10008"}},
+        {"range": {"data_vencimento": {"gte": "2025-01-01", "lte": "2026-12-31"}}}
+      ]
+    }
+  },
+  "sort": [{"data_vencimento": {"order": "asc"}}],
+  "size": 100
+}

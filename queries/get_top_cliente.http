@@ -1,0 +1,18 @@
+### Buscar cliente com mais registros
+GET http://localhost:9200/ciclo_vida_recebivel/_search?pretty=
+Content-Type: application/json
+
+{
+  "size": 0,
+  "aggs": {
+    "clientes": {
+      "terms": {
+        "field": "codigo_cliente.keyword",
+        "size": 1,
+        "order": {
+          "_count": "desc"
+        }
+      }
+    }
+  }
+}

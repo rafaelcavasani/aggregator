@@ -69,7 +69,7 @@ func main() {
 	fmt.Println("✅ Conectado ao Elasticsearch")
 
 	ctx := context.Background()
-	totalRecebiveis := 1000000
+	totalRecebiveis := 10000000
 	indexName := "ciclo_vida_recebivel"
 
 	// Listas de clientes fictícios
