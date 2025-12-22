@@ -19,6 +19,7 @@ import (
 // Recebivel representa um recebível
 type Recebivel struct {
 	IDRecebivel           string         `json:"id_recebivel"`
+	IDPagamento           string         `json:"id_pagamento"`
 	CodigoCliente         string         `json:"codigo_cliente"`
 	CodigoProduto         int            `json:"codigo_produto"`
 	CodigoProdutoParceiro int            `json:"codigo_produto_parceiro"`
@@ -87,6 +88,20 @@ func main() {
 
 	fmt.Println("🚀 Iniciando inserção de recebíveis com goroutines e bulk indexer...")
 
+	// Calcular número de pagamentos (1 pagamento para 1-12 recebíveis)
+	// Usando média de 6.5 recebíveis por pagamento
+	numPagamentos := totalRecebiveis / 6
+	if numPagamentos == 0 {
+		numPagamentos = 1
+	}
+	fmt.Printf("📦 Gerando %d pagamentos para %d recebíveis (proporção 1:1-12)\n", numPagamentos, totalRecebiveis)
+
+	// Pré-gerar IDs de pagamento
+	pagamentosIDs := make([]string, numPagamentos)
+	for i := 0; i < numPagamentos; i++ {
+		pagamentosIDs[i] = fmt.Sprintf("PAG-%s", uuid.New().String())
+	}
+
 	startTime := time.Now()
 
 	// Configurar BulkIndexer para inserções em lote com backpressure
@@ -130,7 +145,7 @@ func main() {
 			defer func() { <-semaphore }() // Liberar permissão
 
 			// Gerar recebível
-			recebivel := gerarRecebivelConcorrente(clientes, index, totalRecebiveis)
+			recebivel := gerarRecebivelConcorrente(clientes, pagamentosIDs, index, totalRecebiveis)
 
 			// Serializar para JSON
 			body, err := json.Marshal(recebivel)
@@ -149,6 +164,7 @@ func main() {
 						Action:     "index",
 						DocumentID: recebivel.IDRecebivel,
 						Body:       bytes.NewReader(body),
+						Routing:    recebivel.IDPagamento, // Routing para co-localização
 						OnSuccess: func(ctx context.Context, item esutil.BulkIndexerItem, res esutil.BulkIndexerResponseItem) {
 							atomic.AddUint64(&countSuccessful, 1)
 							current := atomic.LoadUint64(&countSuccessful)
@@ -217,9 +233,17 @@ func main() {
 }
 
 // gerarRecebivelConcorrente gera um recebível com dados aleatórios (thread-safe)
-func gerarRecebivelConcorrente(clientes []string, index int, total int) Recebivel {
+func gerarRecebivelConcorrente(clientes []string, pagamentosIDs []string, index int, total int) Recebivel {
 	// Criar gerador de números aleatórios específico para esta goroutine
 	rng := rand.New(rand.NewSource(time.Now().UnixNano() + int64(index)))
+
+	// Determinar ID do pagamento pai (1 pagamento para 1-12 recebíveis)
+	recebiveisPorPagamento := 1 + rng.Intn(12) // 1 a 12
+	pagamentoIndex := index / recebiveisPorPagamento
+	if pagamentoIndex >= len(pagamentosIDs) {
+		pagamentoIndex = len(pagamentosIDs) - 1
+	}
+	idPagamento := pagamentosIDs[pagamentoIndex]
 
 	// Gerar UUID único
 	id := uuid.New().String()
@@ -235,6 +259,7 @@ func gerarRecebivelConcorrente(clientes []string, index int, total int) Recebive
 
 	recebivel := Recebivel{
 		IDRecebivel:           id,
+		IDPagamento:           idPagamento,
 		CodigoCliente:         cliente,
 		CodigoProduto:         rng.Intn(500) + 100,
 		CodigoProdutoParceiro: rng.Intn(100) + 1,
