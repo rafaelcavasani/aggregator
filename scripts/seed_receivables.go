@@ -108,9 +108,9 @@ func main() {
 	bi, err := esutil.NewBulkIndexer(esutil.BulkIndexerConfig{
 		Index:         indexName,
 		Client:        es,
-		NumWorkers:    4,                // Reduzido para evitar TooManyRequests
-		FlushBytes:    2e+6,             // Flush a cada 2MB (menor = mais frequente)
-		FlushInterval: 10 * time.Second, // Flush mais frequente
+		NumWorkers:    5,               // Reduzido para evitar TooManyRequests
+		FlushBytes:    2e+6,            // Flush a cada 2MB (menor = mais frequente)
+		FlushInterval: 8 * time.Second, // Flush mais frequente
 		OnError: func(ctx context.Context, err error) {
 			// Implementar retry com backoff exponencial
 			if strings.Contains(err.Error(), "429") || strings.Contains(err.Error(), "Too Many Requests") {

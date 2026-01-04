@@ -1,9 +1,10 @@
-# Data Aggregator - API REST para Elasticsearch
+# Data Aggregator - API REST + GraphQL para Elasticsearch
 
-API REST em Go para gerenciar documentos no Elasticsearch com operações CRUD completas através de um endpoint genérico.
+API em Go para gerenciar documentos no Elasticsearch com operações CRUD completas através de endpoints REST e GraphQL.
 
 ## 🚀 Funcionalidades
 
+### REST API
 - ✅ **API REST** com endpoint único `/query` para todas as operações
 - ✅ **Criar índices** com mapeamentos customizados
 - ✅ **Inserir documentos** com ID específico ou auto-gerado
@@ -12,6 +13,14 @@ API REST em Go para gerenciar documentos no Elasticsearch com operações CRUD c
 - ✅ **Buscar documentos** com queries complexas (match, range, bool, etc)
 - ✅ **Deletar documentos**
 - ✅ **Health check** endpoint
+
+### GraphQL API
+- ✅ **Endpoint GraphQL** `/graphql` com 10 queries prontas
+- ✅ **Interface GraphiQL** interativa no navegador
+- ✅ **Documentação automática** via introspection
+- ✅ **Auto-complete** e validação em tempo real
+- ✅ **Queries complexas** com agregações e filtros
+- ✅ **Consultas múltiplas** em uma única requisição
 
 ## 📋 Pré-requisitos
 
@@ -52,6 +61,12 @@ go run main.go
 
 A API estará disponível em `http://localhost:8080`
 
+**Endpoints disponíveis:**
+- REST API: `http://localhost:8080/query`
+- GraphQL API: `http://localhost:8080/graphql`
+- GraphiQL Interface: `http://localhost:8080/graphql` (abra no navegador)
+- Health Check: `http://localhost:8080/health`
+
 ## 📡 API Endpoints
 
 ### Health Check
@@ -71,7 +86,73 @@ curl http://localhost:8080/health
 }
 ```
 
-### Query Endpoint (Genérico)
+### GraphQL Endpoint
+
+🔷 **Endpoint GraphQL completo com interface interativa**
+
+**URL:** `http://localhost:8080/graphql`
+
+#### 🎨 Interface GraphiQL
+
+Abra no navegador para acessar a interface interativa:
+```
+http://localhost:8080/graphql
+```
+
+**Recursos:**
+- ✨ Editor com syntax highlighting
+- 🔍 Auto-complete (Ctrl + Space)
+- 📖 Documentação automática integrada
+- ⚡ Execução rápida (Ctrl + Enter)
+- 🔷 Explorador de schema
+
+#### 📚 Documentação Completa
+
+Veja o guia completo de GraphQL:
+- [GRAPHQL_GUIDE.md](./GRAPHQL_GUIDE.md) - Guia completo de uso
+- [graphql_queries_examples.md](./graphql_queries_examples.md) - Exemplos de queries
+- [graphql_demo.html](./graphql_demo.html) - Demo interativa
+- [test_introspection.ps1](./test_introspection.ps1) - Script de teste
+
+#### 🚀 Queries Disponíveis
+
+1. **getAllReceivables** - Buscar todos os recebíveis
+2. **getReceivableById** - Buscar por ID
+3. **getCustomerBalance** - Saldo do cliente por período
+4. **getReceivablesByCustomerAndDueDate** - Recebíveis por cliente e data
+5. **countReceivablesByCustomer** - Contar recebíveis
+6. **getIndexCount** - Total de documentos
+7. **countReceivablesGroupByCustomer** - Contagem agrupada
+8. **getTopCustomer** - Cliente top
+9. **getReceivablesByBalanceAvailable** - Por saldo disponível
+10. **getReceivableBalanceById** - Saldo calculado
+
+**Exemplo de Query:**
+```graphql
+query {
+  getAllReceivables(size: 10) {
+    total
+    receivables {
+      id
+      codigo_cliente
+      valor_original
+    }
+  }
+}
+```
+
+**Exemplo de Query Múltipla:**
+```graphql
+query {
+  indexCount: getIndexCount { count }
+  topCustomer: getTopCustomer {
+    codigo_cliente
+    total_recebiveis
+  }
+}
+```
+
+### Query Endpoint (Genérico - REST)
 
 Endpoint único para todas as operações do Elasticsearch.
 

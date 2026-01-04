@@ -6,6 +6,7 @@ Content-Type: application/json
   "mappings": {
     "properties": {
       "id_recebivel": {"type": "keyword"},
+      "id_pagamento": {"type": "keyword"},
       "codigo_cliente": {"type": "keyword"},
       "codigo_produto": {"type": "integer"},
       "codigo_produto_parceiro": {"type": "integer"},

@@ -1,0 +1,102 @@
+### GraphQL - Get All Receivables
+POST http://localhost:8080/graphql
+Content-Type: application/json
+
+{
+  "query": "query { getAllReceivables(size: 10) { total receivables { id id_recebivel codigo_cliente valor_original data_vencimento } } }"
+}
+
+### GraphQL - Get Customer Balance
+POST http://localhost:8080/graphql
+Content-Type: application/json
+
+{
+  "query": "query { getCustomerBalance(codigo_cliente: \"123456\", data_inicio: \"2025-01-01\", data_fim: \"2026-12-31\") { codigo_cliente periodo { inicio fim } total_recebiveis saldo_total saldo_formatado } }"
+}
+
+### GraphQL - Get Receivable by ID
+POST http://localhost:8080/graphql
+Content-Type: application/json
+
+{
+  "query": "query { getReceivableById(id: \"REC-00001\") { id id_recebivel codigo_cliente valor_original data_vencimento id_pagamento cancelamentos { data_cancelamento valor_cancelado motivo } negociacoes { data_negociacao valor_negociado tipo_negociacao observacao } } }"
+}
+
+### GraphQL - Count Receivables by Customer
+POST http://localhost:8080/graphql
+Content-Type: application/json
+
+{
+  "query": "query { countReceivablesByCustomer(codigo_cliente: \"CLI-10008\") { count } }"
+}
+
+### GraphQL - Get Top Customer
+POST http://localhost:8080/graphql
+Content-Type: application/json
+
+{
+  "query": "query { getTopCustomer { codigo_cliente total_recebiveis } }"
+}
+
+### GraphQL - Get Index Count
+POST http://localhost:8080/graphql
+Content-Type: application/json
+
+{
+  "query": "query { getIndexCount { count } }"
+}
+
+### GraphQL - Count Receivables Group By Customer
+POST http://localhost:8080/graphql
+Content-Type: application/json
+
+{
+  "query": "query { countReceivablesGroupByCustomer(data_inicio: \"2025-01-01\", data_fim: \"2026-12-31\") { codigo_cliente total_recebiveis } }"
+}
+
+### GraphQL - Get Receivables by Customer and Due Date
+POST http://localhost:8080/graphql
+Content-Type: application/json
+
+{
+  "query": "query { getReceivablesByCustomerAndDueDate(codigo_cliente: \"123456\", data_inicio: \"2025-12-01\", data_fim: \"2026-12-31\", from: 0, size: 10) { total receivables { id id_recebivel codigo_cliente valor_original data_vencimento } } }"
+}
+
+### GraphQL - Get Receivables by Balance Available
+POST http://localhost:8080/graphql
+Content-Type: application/json
+
+{
+  "query": "query { getReceivablesByBalanceAvailable(codigo_cliente: \"CLI-10001\", min_balance: 500.00, from: 0, size: 50) { total receivables { id id_recebivel codigo_cliente valor_original data_vencimento } } }"
+}
+
+### GraphQL - Get Receivable Balance by ID
+POST http://localhost:8080/graphql
+Content-Type: application/json
+
+{
+  "query": "query { getReceivableBalanceById(id: \"a7f3c8e2-9b4d-4f6a-8c2e-5d7b9f1a3e6c\") { id id_recebivel codigo_cliente valor_original saldo_disponivel data_vencimento cancelamentos { data_cancelamento valor_cancelado motivo } negociacoes { data_negociacao valor_negociado tipo_negociacao } } }"
+}
+
+### GraphQL - Combined Query Example
+POST http://localhost:8080/graphql
+Content-Type: application/json
+
+{
+  "query": "query { indexCount: getIndexCount { count } topCustomer: getTopCustomer { codigo_cliente total_recebiveis } recentReceivables: getAllReceivables(size: 5) { total receivables { id_recebivel codigo_cliente valor_original } } }"
+}
+
+### GraphQL - Formatted Query with Variables
+POST http://localhost:8080/graphql
+Content-Type: application/json
+
+{
+  "query": "query GetReceivablesByCustomerAndDueDate($codigo_cliente: String!, $data_inicio: String!, $data_fim: String!, $from: Int, $size: Int) { getReceivablesByCustomerAndDueDate(codigo_cliente: $codigo_cliente, data_inicio: $data_inicio, data_fim: $data_fim, from: $from, size: $size) { total receivables { id_recebivel codigo_cliente valor_original data_vencimento } } }",
+  "variables": {
+    "codigo_cliente": "CLI-10001",
+    "data_inicio": "2025-01-01",
+    "data_fim": "2026-12-31",
+    "from": 0,
+    "size": 20
+  }
+}

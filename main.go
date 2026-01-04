@@ -12,6 +12,8 @@ import (
 
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/esapi"
+	"github.com/graphql-go/graphql"
+	"github.com/graphql-go/handler"
 )
 
 // Document representa um documento genérico no Elasticsearch
@@ -245,6 +247,149 @@ type QueryResponse struct {
 }
 
 var esClient *ElasticsearchClient
+
+// initGraphQLSchema inicializa o schema GraphQL
+func initGraphQLSchema() (graphql.Schema, error) {
+	// Query root
+	rootQuery := graphql.NewObject(graphql.ObjectConfig{
+		Name: "Query",
+		Fields: graphql.Fields{
+			"getAllReceivables": &graphql.Field{
+				Type:        searchResultType,
+				Description: "Buscar todos os recebíveis com limite",
+				Args: graphql.FieldConfigArgument{
+					"size": &graphql.ArgumentConfig{
+						Type:         graphql.Int,
+						DefaultValue: 10,
+					},
+				},
+				Resolve: getAllReceivablesResolver,
+			},
+			"getReceivableById": &graphql.Field{
+				Type:        receivableType,
+				Description: "Buscar recebível por ID",
+				Args: graphql.FieldConfigArgument{
+					"id": &graphql.ArgumentConfig{
+						Type: graphql.NewNonNull(graphql.String),
+					},
+				},
+				Resolve: getReceivableByIdResolver,
+			},
+			"getCustomerBalance": &graphql.Field{
+				Type:        balanceType,
+				Description: "Buscar saldo de um cliente por período",
+				Args: graphql.FieldConfigArgument{
+					"codigo_cliente": &graphql.ArgumentConfig{
+						Type: graphql.NewNonNull(graphql.String),
+					},
+					"data_inicio": &graphql.ArgumentConfig{
+						Type: graphql.NewNonNull(graphql.String),
+					},
+					"data_fim": &graphql.ArgumentConfig{
+						Type: graphql.NewNonNull(graphql.String),
+					},
+				},
+				Resolve: getCustomerBalanceResolver,
+			},
+			"getReceivablesByCustomerAndDueDate": &graphql.Field{
+				Type:        searchResultType,
+				Description: "Buscar recebíveis por cliente e data de vencimento",
+				Args: graphql.FieldConfigArgument{
+					"codigo_cliente": &graphql.ArgumentConfig{
+						Type: graphql.NewNonNull(graphql.String),
+					},
+					"data_inicio": &graphql.ArgumentConfig{
+						Type: graphql.NewNonNull(graphql.String),
+					},
+					"data_fim": &graphql.ArgumentConfig{
+						Type: graphql.NewNonNull(graphql.String),
+					},
+					"from": &graphql.ArgumentConfig{
+						Type:         graphql.Int,
+						DefaultValue: 0,
+					},
+					"size": &graphql.ArgumentConfig{
+						Type:         graphql.Int,
+						DefaultValue: 10,
+					},
+				},
+				Resolve: getReceivablesByCustomerAndDueDateResolver,
+			},
+			"countReceivablesByCustomer": &graphql.Field{
+				Type:        countResultType,
+				Description: "Contar recebíveis de um cliente específico",
+				Args: graphql.FieldConfigArgument{
+					"codigo_cliente": &graphql.ArgumentConfig{
+						Type: graphql.NewNonNull(graphql.String),
+					},
+				},
+				Resolve: countReceivablesByCustomerResolver,
+			},
+			"getIndexCount": &graphql.Field{
+				Type:        countResultType,
+				Description: "Contar total de documentos no índice",
+				Resolve:     getIndexCountResolver,
+			},
+			"countReceivablesGroupByCustomer": &graphql.Field{
+				Type:        graphql.NewList(customerStatsType),
+				Description: "Contar recebíveis agrupados por cliente",
+				Args: graphql.FieldConfigArgument{
+					"data_inicio": &graphql.ArgumentConfig{
+						Type: graphql.String,
+					},
+					"data_fim": &graphql.ArgumentConfig{
+						Type: graphql.String,
+					},
+				},
+				Resolve: countReceivablesGroupByCustomerResolver,
+			},
+			"getTopCustomer": &graphql.Field{
+				Type:        customerStatsType,
+				Description: "Buscar cliente com mais registros",
+				Resolve:     getTopCustomerResolver,
+			},
+			"getReceivablesByBalanceAvailable": &graphql.Field{
+				Type:        searchResultType,
+				Description: "Buscar recebíveis com saldo disponível mínimo",
+				Args: graphql.FieldConfigArgument{
+					"codigo_cliente": &graphql.ArgumentConfig{
+						Type: graphql.NewNonNull(graphql.String),
+					},
+					"min_balance": &graphql.ArgumentConfig{
+						Type:         graphql.Float,
+						DefaultValue: 0.0,
+					},
+					"from": &graphql.ArgumentConfig{
+						Type:         graphql.Int,
+						DefaultValue: 0,
+					},
+					"size": &graphql.ArgumentConfig{
+						Type:         graphql.Int,
+						DefaultValue: 50,
+					},
+				},
+				Resolve: getReceivablesByBalanceAvailableResolver,
+			},
+			"getReceivableBalanceById": &graphql.Field{
+				Type:        receivableType,
+				Description: "Buscar saldo de um recebível específico por ID",
+				Args: graphql.FieldConfigArgument{
+					"id": &graphql.ArgumentConfig{
+						Type: graphql.NewNonNull(graphql.String),
+					},
+				},
+				Resolve: getReceivableBalanceByIdResolver,
+			},
+		},
+	})
+
+	// Schema configuration
+	schemaConfig := graphql.SchemaConfig{
+		Query: rootQuery,
+	}
+
+	return graphql.NewSchema(schemaConfig)
+}
 
 // handleQuery processa requisições genéricas para o Elasticsearch
 func handleQuery(w http.ResponseWriter, r *http.Request) {
@@ -480,16 +625,32 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Inicializar schema GraphQL
+	schema, err := initGraphQLSchema()
+	if err != nil {
+		log.Fatalf("Erro ao criar schema GraphQL: %v", err)
+	}
+
+	// Configurar handler GraphQL
+	graphqlHandler := handler.New(&handler.Config{
+		Schema:   &schema,
+		Pretty:   true,
+		GraphiQL: true,
+	})
+
 	// Configurar rotas HTTP
 	http.HandleFunc("/query", handleQuery)
 	http.HandleFunc("/health", healthHandler)
 	http.HandleFunc("/saldo-cliente", saldoClienteHandler)
+	http.Handle("/graphql", graphqlHandler)
 
 	// Iniciar servidor HTTP
 	port := ":8080"
 	fmt.Printf("🚀 Servidor HTTP iniciado em http://localhost%s\n", port)
 	fmt.Printf("📝 Endpoint de query: POST http://localhost%s/query\n", port)
 	fmt.Printf("💚 Health check: GET http://localhost%s/health\n", port)
+	fmt.Printf("🔷 GraphQL endpoint: POST http://localhost%s/graphql\n", port)
+	fmt.Printf("🎨 GraphiQL playground: http://localhost%s/graphql\n", port)
 	fmt.Println("\n✅ Servidor pronto para receber requisições!")
 
 	if err := http.ListenAndServe(port, nil); err != nil {
